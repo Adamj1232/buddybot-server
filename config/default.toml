@@ -1,0 +1,15 @@
+# Server configuration
+[server]
+host = "127.0.0.1"
+port = 8080
+workers = 4
+
+# Database configuration
+[database]
+url = "postgres://postgres:postgres@localhost:5432/buddybot"
+max_connections = 5
+
+# Authentication configuration
+[auth]
+jwt_secret = "your-secret-key-here"
+token_expiry_hours = 24 

@@ -1,0 +1,17 @@
+# API Proxy Module
+
+## Overview
+This module securely proxies requests to the Claude API, handling authentication, request transformation, and error handling.
+
+## Components
+- ApiKeyManager: Securely stores and retrieves API keys
+- RequestTransformer: Converts client requests to Claude API format
+- ResponseHandler: Processes API responses
+
+## Key Functions
+- `proxy_request(request: ClientRequest) -> Result<ApiResponse>`
+- `transform_request(request: ClientRequest) -> Result<ApiRequest>`
+- `handle_response(response: ApiResponse) -> Result<ClientResponse>`
+
+## Implementation Details
+The proxy uses secure practices to manage API keys, including encryption at rest and memory protection. Requests are validated before being forwarded to the Claude API.

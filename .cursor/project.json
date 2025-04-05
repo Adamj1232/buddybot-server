@@ -1,0 +1,14 @@
+{
+  "name": "BuddyBot Server",
+  "description": "Secure websocket server for BuddyBot, proxying Claude API requests",
+  "language": "rust",
+  "projectType": "server",
+  "tags": ["websocket", "security", "api-proxy", "rust", "scaling"],
+  "tasks": {
+    "phase1": { "file": ".cursor/tasks/phase1.md", "description": "Architecture & Setup" },
+    "phase2": { "file": ".cursor/tasks/phase2.md", "description": "Core Implementation" },
+    "phase3": { "file": ".cursor/tasks/phase3.md", "description": "Scaling & Security" },
+    "phase4": { "file": ".cursor/tasks/phase4.md", "description": "Testing & Optimization" },
+    "phase5": { "file": ".cursor/tasks/phase5.md", "description": "Deployment & Monitoring" }
+  }
+}

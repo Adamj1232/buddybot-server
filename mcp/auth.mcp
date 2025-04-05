@@ -1,0 +1,18 @@
+# Authentication Module
+
+## Overview
+This module handles user authentication via uAuth, session management with JWT tokens, and implements rate limiting for API requests.
+
+## Components
+- UAuthClient: Interfaces with uAuth service
+- SessionManager: Handles JWT token generation and validation
+- RateLimiter: Implements request rate limiting
+
+## Key Functions
+- `authenticate_user(code: String) -> Result<AuthResponse>`
+- `validate_session(token: String) -> Result<User>`
+- `create_session(user_id: Uuid) -> Result<Session>`
+- `check_rate_limit(user_id: Uuid) -> Result<bool>`
+
+## Implementation Details
+The authentication flow uses OAuth 2.0 with uAuth as the identity provider. Sessions are maintained using JWT tokens with configurable expiration periods.

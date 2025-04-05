@@ -1,0 +1,18 @@
+# Scaling Module
+
+## Overview
+This module implements auto-scaling capabilities based on CPU usage and connection load.
+
+## Components
+- MetricsCollector: Gathers system metrics
+- ScalingDecider: Determines when to scale
+- InstanceManager: Manages server instances
+
+## Key Functions
+- `collect_metrics() -> SystemMetrics`
+- `evaluate_scaling_needs(metrics: SystemMetrics) -> ScalingDecision`
+- `scale_up(count: u8) -> Result<()>`
+- `scale_down(count: u8) -> Result<()>`
+
+## Implementation Details
+The scaling logic monitors CPU usage and connection count, scaling up when thresholds are exceeded and scaling down during periods of low usage. Kubernetes or similar container orchestration is used for actual scaling operations.

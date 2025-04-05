@@ -1,0 +1,18 @@
+# WebSocket Module
+
+## Overview
+This module manages WebSocket connections from clients, including connection establishment, message handling, and connection health monitoring.
+
+## Components
+- ConnectionManager: Tracks active connections
+- MessageHandler: Processes and routes messages
+- HeartbeatService: Monitors connection health
+
+## Key Functions
+- `handle_connection(socket: WebSocket, user_id: Uuid) -> Result<()>`
+- `send_message(user_id: Uuid, message: Message) -> Result<()>`
+- `broadcast(message: Message) -> Result<()>`
+- `close_connection(user_id: Uuid) -> Result<()>`
+
+## Implementation Details
+Connections are managed using Tokio's async runtime. Each connection is handled in its own task, with a shared connection pool tracking all active connections.
