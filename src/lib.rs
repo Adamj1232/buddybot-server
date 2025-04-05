@@ -14,6 +14,9 @@ pub use error::AppError;
 pub type Result<T> = std::result::Result<T, AppError>;
 pub use config::Settings;
 
+pub use auth::{AuthService, RateLimiter, RateLimitConfig};
+pub use db::{DbOperations, User, UserSession};
+
 /// Health check endpoint handler
 /// Returns a JSON response with server status and timestamp
 pub async fn health_check() -> HttpResponse {

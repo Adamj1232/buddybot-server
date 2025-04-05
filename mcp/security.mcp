@@ -1,0 +1,39 @@
+# Security Guidelines
+
+## Overview
+This document outlines security best practices for the BuddyBot server implementation.
+
+## Authentication Security
+- Use strong JWT signing algorithms (RS256 or ES256)
+- Implement proper token validation with expiration checks
+- Store sensitive tokens securely with proper encryption
+- Implement CSRF protection for authentication endpoints
+- Add brute force protection with rate limiting and account lockouts
+
+## WebSocket Security
+- Implement authentication before WebSocket upgrade
+- Add message validation to prevent injection attacks
+- Implement proper connection timeouts
+- Create message size limits to prevent DoS
+- Add rate limiting per connection
+
+## API Key Management
+- Use envelope encryption for API keys
+- Implement secure key rotation procedures
+- Never log full API keys or tokens
+- Use memory protection for keys in use
+- Implement least privilege access for API credentials
+
+## Data Protection
+- Encrypt sensitive data at rest
+- Implement proper database security
+- Use parameterized queries for all database operations
+- Sanitize all user inputs
+- Implement proper error responses that don't leak information
+
+## Secure Development Practices
+- Run security linters regularly
+- Implement proper logging without sensitive data
+- Keep dependencies updated
+- Use memory-safe data structures
+- Implement proper concurrency controls

@@ -5,3 +5,11 @@
 
 // Re-export public interfaces
 // Will be implemented in Phase 2
+
+mod connection;
+mod pool;
+mod server;
+
+pub use connection::{Connection, ClientMessage, ServerMessage};
+pub use pool::ConnectionPool;
+pub use server::WebSocketServer;

@@ -142,6 +142,27 @@ pub enum DatabaseError {
     Duplicate,
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    #[error("Database error: {0}")]
+    Database(#[from] sqlx::Error),
+    
+    #[error("JWT error: {0}")]
+    Jwt(#[from] jsonwebtoken::errors::Error),
+    
+    #[error("HTTP error: {0}")]
+    Http(#[from] reqwest::Error),
+    
+    #[error("Unauthorized: {0}")]
+    Unauthorized(String),
+    
+    #[error("External error: {0}")]
+    External(String),
+    
+    #[error("UUID parse error: {0}")]
+    Uuid(#[from] uuid::Error),
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
