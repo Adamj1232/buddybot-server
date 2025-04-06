@@ -163,6 +163,29 @@ pub enum Error {
     Uuid(#[from] uuid::Error),
 }
 
+impl actix_web::ResponseError for Error {
+    fn error_response(&self) -> actix_web::HttpResponse {
+        let status = self.status_code();
+        let message = self.to_string();
+        actix_web::HttpResponse::build(status).json(serde_json::json!({
+            "error": {
+                "status": status.as_u16(),
+                "message": message
+            }
+        }))
+    }
+
+    fn status_code(&self) -> actix_web::http::StatusCode {
+        use actix_web::http::StatusCode;
+        match self {
+            Error::Unauthorized(_) => StatusCode::UNAUTHORIZED,
+            Error::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::Jwt(_) => StatusCode::UNAUTHORIZED,
+            _ => StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

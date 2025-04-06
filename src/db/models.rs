@@ -7,7 +7,6 @@ use uuid::Uuid;
 pub struct User {
     pub id: Uuid,
     pub email: String,
-    pub uauth_id: String,
     pub display_name: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -17,12 +16,11 @@ pub struct User {
 }
 
 impl User {
-    pub fn new(email: String, uauth_id: String, display_name: Option<String>) -> Self {
+    pub fn new(email: String, display_name: Option<String>) -> Self {
         let now = Utc::now();
         Self {
             id: Uuid::new_v4(),
             email,
-            uauth_id,
             display_name,
             created_at: now,
             updated_at: now,

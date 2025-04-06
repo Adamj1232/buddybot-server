@@ -15,7 +15,9 @@ pub type Result<T> = std::result::Result<T, AppError>;
 pub use config::Settings;
 
 pub use auth::{AuthService, RateLimiter, RateLimitConfig};
+pub use auth::handlers::{login, register};
 pub use db::{DbOperations, User, UserSession};
+pub use scaling::{ScalingManager, ScalingConfig, InstanceInfo};
 
 /// Health check endpoint handler
 /// Returns a JSON response with server status and timestamp
@@ -31,6 +33,8 @@ pub async fn health_check() -> HttpResponse {
 pub struct AppState {
     pub config: Arc<Settings>,
     pub db_pool: Arc<PgPool>,
+    pub scaling: Arc<ScalingManager>,
+    pub auth_service: Arc<AuthService>,
 }
 
 impl AppState {
@@ -39,10 +43,24 @@ impl AppState {
         let db_pool = PgPool::connect(&config.database.url)
             .await
             .map_err(|e| AppError::DatabaseError(error::DatabaseError::ConnectionError(e.to_string())))?;
+        
+        let db_pool = Arc::new(db_pool);
+        
+        // Initialize scaling manager
+        let scaling = Arc::new(ScalingManager::new(ScalingConfig::default()));
+
+        // Initialize auth service
+        let db_ops = DbOperations::new(db_pool.clone());
+        let auth_service = Arc::new(AuthService::new(
+            db_ops,
+            config.auth.jwt_secret.clone(),
+        ));
 
         Ok(Self {
             config: Arc::new(config),
-            db_pool: Arc::new(db_pool),
+            db_pool,
+            scaling,
+            auth_service,
         })
     }
 
@@ -88,9 +106,19 @@ mod tests {
             .await
             .expect("Failed to create mock pool");
         
+        let scaling = Arc::new(ScalingManager::new(ScalingConfig::default()));
+        let pool_arc = Arc::new(pool);
+        let db_ops = DbOperations::new(pool_arc.clone());
+        let auth_service = Arc::new(AuthService::new(
+            db_ops,
+            "test_secret".to_string(),
+        ));
+
         let state = AppState {
             config: Arc::new(config),
-            db_pool: Arc::new(pool),
+            db_pool: pool_arc,
+            scaling,
+            auth_service,
         };
         
         let cloned = state.clone();
@@ -98,5 +126,7 @@ mod tests {
         // Verify Arc references are shared
         assert!(Arc::ptr_eq(&state.config, &cloned.config));
         assert!(Arc::ptr_eq(&state.db_pool, &cloned.db_pool));
+        assert!(Arc::ptr_eq(&state.scaling, &cloned.scaling));
+        assert!(Arc::ptr_eq(&state.auth_service, &cloned.auth_service));
     }
 } 

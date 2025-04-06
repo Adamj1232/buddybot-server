@@ -180,13 +180,12 @@ mod tests {
             .await
             .expect("Failed to run migrations");
 
+        let pool = Arc::new(pool);
         let db = DbOperations::new(pool);
         
         let auth_service = Arc::new(AuthService::new(
             db,
             "test_secret".to_string(),
-            "test_client_id".to_string(),
-            "test_client_secret".to_string(),
         ));
 
         let server = Arc::new(WebSocketServer::new(auth_service));

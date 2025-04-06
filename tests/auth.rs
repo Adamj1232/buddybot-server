@@ -21,50 +21,22 @@ async fn setup_test_db() -> PgPool {
 
 #[tokio::test]
 async fn test_auth_flow() {
-    // Setup mock uAuth server
-    let mock_server = MockServer::start().await;
-    
-    // Mock token endpoint
-    Mock::given(method("POST"))
-        .and(path("/oauth/token"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
-            "access_token": "test_access_token",
-            "token_type": "Bearer",
-            "expires_in": 3600
-        })))
-        .mount(&mock_server)
-        .await;
-    
-    // Mock user info endpoint
-    Mock::given(method("GET"))
-        .and(path("/api/v1/user"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
-            "id": "test_user_id",
-            "email": "test@example.com",
-            "name": "Test User"
-        })))
-        .mount(&mock_server)
-        .await;
-
     // Setup test database
     let pool = setup_test_db().await;
-    let db = DbOperations::new(pool);
+    let db = DbOperations::new(std::sync::Arc::new(pool));
     
     // Create auth service
     let auth_service = AuthService::new(
         db,
         "test_secret".to_string(),
-        "test_client_id".to_string(),
-        "test_client_secret".to_string(),
     );
 
     // Test authentication flow
-    let token = auth_service.authenticate_uauth("test_code").await.unwrap();
+    let token = auth_service.authenticate("test@example.com", "password123").await.unwrap();
     
     // Validate token
     let user = auth_service.validate_token(&token).await.unwrap();
     assert_eq!(user.email, "test@example.com");
-    assert_eq!(user.uauth_id, "test_user_id");
 }
 
 #[tokio::test]
@@ -90,13 +62,11 @@ async fn test_rate_limiting() {
 #[tokio::test]
 async fn test_invalid_token() {
     let pool = setup_test_db().await;
-    let db = DbOperations::new(pool);
+    let db = DbOperations::new(std::sync::Arc::new(pool));
     
     let auth_service = AuthService::new(
         db,
         "test_secret".to_string(),
-        "test_client_id".to_string(),
-        "test_client_secret".to_string(),
     );
 
     match auth_service.validate_token("invalid_token").await {

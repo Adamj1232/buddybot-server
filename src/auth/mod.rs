@@ -8,6 +8,8 @@
 
 mod service;
 mod rate_limit;
+pub mod handlers;
 
 pub use service::{AuthService, Claims};
 pub use rate_limit::{RateLimiter, RateLimitConfig};
+pub use handlers::{login, register};

@@ -6,13 +6,22 @@ use chrono::DateTime;
 async fn test_health_check() {
     // Create test app state
     let config = Settings::new().expect("Failed to load test config");
+    let pool = std::sync::Arc::new(
+        sqlx::PgPool::connect("postgres://fake:fake@localhost/fake")
+            .await
+            .expect("Failed to create mock pool")
+    );
+    let db_ops = buddybot_server::db::DbOperations::new(pool.clone());
     let state = web::Data::new(AppState {
         config: std::sync::Arc::new(config),
-        db_pool: std::sync::Arc::new(
-            sqlx::PgPool::connect("postgres://fake:fake@localhost/fake")
-                .await
-                .expect("Failed to create mock pool")
-        ),
+        db_pool: pool,
+        scaling: std::sync::Arc::new(buddybot_server::scaling::ScalingManager::new(
+            buddybot_server::scaling::ScalingConfig::default()
+        )),
+        auth_service: std::sync::Arc::new(buddybot_server::auth::AuthService::new(
+            db_ops,
+            "test_secret".to_string(),
+        )),
     });
 
     // Create test app

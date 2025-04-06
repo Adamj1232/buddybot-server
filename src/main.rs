@@ -1,17 +1,22 @@
 use actix_web::{web, App, HttpResponse, HttpServer};
 use actix_cors::Cors;
 use buddybot_server::{AppState, Settings, Result, AppError};
+use buddybot_server::auth::handlers::{login, register};
 use dotenv::dotenv;
 use std::net::TcpListener;
 use tracing::{info, Level};
 use tracing_subscriber::FmtSubscriber;
+use std::time::Duration;
 
 /// Health check endpoint handler
 /// Returns a JSON response with server status and timestamp
-async fn health_check() -> HttpResponse {
+async fn health_check(state: web::Data<AppState>) -> HttpResponse {
+    let instances = state.scaling.get_active_instances().await;
+
     HttpResponse::Ok().json(serde_json::json!({
         "status": "healthy",
-        "timestamp": chrono::Utc::now().to_rfc3339()
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "instances": instances,
     }))
 }
 
@@ -39,6 +44,23 @@ async fn main() -> Result<()> {
     // Initialize application state
     let state = AppState::new(config.clone()).await?;
     let state = web::Data::new(state);
+
+    // Start instance management
+    let scaling_state = state.clone();
+    tokio::spawn(async move {
+        loop {
+            // Check scaling needs
+            if let Some(action) = scaling_state.scaling.check_scaling_needs().await {
+                info!("Scaling action required: {:?}", action);
+                // Implement scaling action here
+            }
+
+            // Cleanup inactive instances
+            scaling_state.scaling.cleanup_inactive_instances().await;
+
+            tokio::time::sleep(Duration::from_secs(60)).await;
+        }
+    });
     
     // Create and bind TCP listener
     let listener = TcpListener::bind(format!("{}:{}", config.server.host, config.server.port))?;
@@ -55,6 +77,8 @@ async fn main() -> Result<()> {
             .wrap(cors)
             .app_data(state.clone())
             .route("/health", web::get().to(health_check))
+            .route("/auth/login", web::post().to(login))
+            .route("/auth/register", web::post().to(register))
     })
     .listen(listener)?
     .workers(config.server.workers as usize)
