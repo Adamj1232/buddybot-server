@@ -5,7 +5,7 @@ A secure websocket server for BuddyBot that proxies requests to Claude API, prov
 ## Features
 
 - Secure websocket connections for real-time communication
-- Authentication via uAuth
+- Authentication via JWT
 - API key obfuscation for Claude API requests
 - Auto-scaling based on CPU usage
 - Connection management with heartbeat detection

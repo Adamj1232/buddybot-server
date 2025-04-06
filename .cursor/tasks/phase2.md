@@ -7,12 +7,6 @@
   - [ ] Add user creation and retrieval functions
   - [ ] Implement user permissions model
 
-- [ ] uAuth Integration
-  - [ ] Implement OAuth flow
-  - [ ] Create authorization endpoint
-  - [ ] Implement callback handling
-  - [ ] Parse and validate uAuth responses
-
 - [ ] JWT Session Management
   - [ ] Implement JWT token generation
   - [ ] Create token validation and refresh logic

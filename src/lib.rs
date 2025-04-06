@@ -15,7 +15,7 @@ pub type Result<T> = std::result::Result<T, AppError>;
 pub use config::Settings;
 
 pub use auth::{AuthService, RateLimiter, RateLimitConfig};
-pub use auth::handlers::{login, register};
+pub use auth::handlers::{login, register, logout};
 pub use db::{DbOperations, User, UserSession};
 pub use scaling::{ScalingManager, ScalingConfig, InstanceInfo};
 

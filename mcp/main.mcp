@@ -3,7 +3,7 @@
 ## Project Overview
 - Secure websocket server for BuddyBot
 - Proxies requests to Claude API
-- Manages user authentication via uAuth
+- Manages user authentication via JWT
 - Provides auto-scaling capabilities
 - Implements strong security measures
 

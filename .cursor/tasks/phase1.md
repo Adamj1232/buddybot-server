@@ -7,7 +7,7 @@
 
 ## Core Architecture Design
 - [ ] Design websocket server architecture
-- [ ] Plan authentication flow with uAuth
+- [ ] Plan authentication flow with JWT
 - [ ] Design API proxy mechanism for Claude
 - [ ] Plan database schema for user management
 - [ ] Document security measures

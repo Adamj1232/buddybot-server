@@ -102,7 +102,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_rate_limiter() {
-        let config = RateLimitConfig::default();
+        let mut config = RateLimitConfig::default();
+        // Use a shorter window for testing
+        config.window_size = Duration::seconds(1);
         let limiter = RateLimiter::new(config);
         let user_id = Uuid::new_v4();
 
@@ -115,7 +117,7 @@ mod tests {
         assert!(!limiter.check_rate_limit(user_id, "standard").await);
 
         // Wait for window to pass
-        sleep(TokioDuration::from_secs(60)).await;
+        sleep(TokioDuration::from_millis(1100)).await;
 
         // Should allow requests again
         assert!(limiter.check_rate_limit(user_id, "standard").await);

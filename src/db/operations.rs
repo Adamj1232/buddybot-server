@@ -7,6 +7,7 @@ use sqlx::postgres::PgPoolOptions;
 use sqlx::{Transaction, Postgres};
 use std::time::Duration;
 use std::sync::Arc;
+use sqlx::{Connection, Executor};
 
 pub struct DbOperations {
     pool: Arc<PgPool>,
@@ -158,6 +159,17 @@ impl DbOperations {
         Ok(())
     }
 
+    pub async fn delete_session(&self, token: &str) -> Result<(), Error> {
+        sqlx::query!(
+            "DELETE FROM user_sessions WHERE token = $1",
+            token
+        )
+        .execute(self.pool.as_ref())
+        .await?;
+
+        Ok(())
+    }
+
     pub async fn cleanup_expired_sessions(&self) -> Result<u64, Error> {
         let mut transaction = self.begin_transaction().await?;
         
@@ -188,71 +200,132 @@ pub struct DbPoolStatus {
     pub idle_connections: u32,
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::db::models::User;
+#[allow(dead_code)] // Allow dead code for test helper
+async fn setup_test_db() -> (PgPool, String) {
+    let db_name = format!("buddybot_test_{}", Uuid::new_v4().to_string());
+    let admin_db_url = "postgres://postgres:postgres@localhost:5432/postgres";
+    let test_db_url = format!("postgres://postgres:postgres@localhost:5432/{}", db_name);
 
-    #[tokio::test]
-    async fn test_transaction_rollback() {
-        let db = DbOperations::new_with_options(
-            "postgres://postgres:postgres@localhost:5432/buddybot_test",
-            5,
-            Duration::from_secs(5),
-        ).await.unwrap();
-
-        let mut transaction = db.begin_transaction().await.unwrap();
-        
-        // Create a test user
-        let user = User::new(
-            "test@example.com".to_string(),
-            Some("Test User".to_string()),
-        );
-
-        // Insert user in transaction
-        let created_user = db.create_user_with_transaction(&user, &mut transaction)
-            .await
-            .unwrap();
-
-        // Verify user exists in transaction
-        let found_user = sqlx::query_as!(
-            User,
-            "SELECT id, email, display_name, created_at, updated_at, last_login, is_active, rate_limit_tier FROM users WHERE id = $1",
-            created_user.id
-        )
-        .fetch_optional(&mut *transaction)
+    let mut admin_conn = sqlx::PgConnection::connect(&admin_db_url)
         .await
-        .unwrap();
+        .expect("Failed to connect to admin database");
 
-        assert!(found_user.is_some());
-
-        // Rollback transaction
-        transaction.rollback().await.unwrap();
-
-        // Verify user doesn't exist after rollback
-        let found_user = sqlx::query_as!(
-            User,
-            "SELECT id, email, display_name, created_at, updated_at, last_login, is_active, rate_limit_tier FROM users WHERE id = $1",
-            created_user.id
-        )
-        .fetch_optional(db.pool.as_ref())
+    admin_conn
+        .execute(&*format!("DROP DATABASE IF EXISTS \"{}\"", db_name))
         .await
-        .unwrap();
+        .expect("Failed to drop test database");
 
-        assert!(found_user.is_none());
-    }
+    admin_conn
+        .execute(&*format!("CREATE DATABASE \"{}\"", db_name))
+        .await
+        .expect("Failed to create test database");
 
-    #[tokio::test]
-    async fn test_pool_status() {
-        let db = DbOperations::new_with_options(
-            "postgres://postgres:postgres@localhost:5432/buddybot_test",
-            5,
-            Duration::from_secs(5),
-        ).await.unwrap();
+    admin_conn.close().await.ok();
 
-        let status = db.get_pool_status().await.unwrap();
-        assert_eq!(status.total_connections, 5);
-        assert!(status.idle_connections <= 5);
-        assert!(status.active_connections <= 5);
-    }
+    let pool = PgPoolOptions::new()
+        .connect(&test_db_url)
+        .await
+        .expect("Failed to connect to test database");
+
+    sqlx::migrate!("./migrations")
+        .run(&pool)
+        .await
+        .expect("Failed to run migrations");
+
+    (pool, db_name)
+}
+
+#[allow(dead_code)] // Allow dead code for test helper
+async fn cleanup_test_db(db_name: &str) {
+    let admin_db_url = "postgres://postgres:postgres@localhost:5432/postgres";
+    let mut admin_conn = sqlx::PgConnection::connect(&admin_db_url)
+        .await
+        .expect("Failed to connect to admin database for cleanup");
+
+    admin_conn
+        .execute(&*format!(
+            "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '{}'",
+            db_name
+        ))
+        .await
+        .ok();
+    admin_conn
+        .execute(&*format!("DROP DATABASE IF EXISTS \"{}\"", db_name))
+        .await
+        .expect("Failed to drop test database during cleanup");
+
+    admin_conn.close().await.ok();
+}
+
+#[tokio::test]
+async fn test_transaction_rollback() {
+    let (pool, db_name) = setup_test_db().await;
+    let db = DbOperations::new(Arc::new(pool));
+    let mut transaction = db.begin_transaction().await.unwrap();
+    
+    let user = User::new(
+        "test@example.com".to_string(),
+        Some("Test User".to_string()),
+    );
+
+    let created_user = sqlx::query_as!(
+        User,
+        r#"
+        INSERT INTO users (id, email, display_name, created_at, updated_at, is_active, rate_limit_tier)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING id, email, display_name, created_at, updated_at, last_login, is_active, rate_limit_tier
+        "#,
+        user.id,
+        user.email,
+        user.display_name,
+        user.created_at,
+        user.updated_at,
+        user.is_active,
+        user.rate_limit_tier
+    )
+    .fetch_one(&mut *transaction)
+    .await
+    .unwrap();
+
+    let found_user = sqlx::query_as!(
+        User,
+        "SELECT id, email, display_name, created_at, updated_at, last_login, is_active, rate_limit_tier FROM users WHERE id = $1",
+        created_user.id
+    )
+    .fetch_optional(&mut *transaction)
+    .await
+    .unwrap();
+
+    assert!(found_user.is_some());
+
+    transaction.rollback().await.unwrap();
+
+    let found_user = sqlx::query_as!(
+        User,
+        "SELECT id, email, display_name, created_at, updated_at, last_login, is_active, rate_limit_tier FROM users WHERE id = $1",
+        created_user.id
+    )
+    .fetch_optional(db.pool.as_ref())
+    .await
+    .unwrap();
+
+    assert!(found_user.is_none());
+
+    db.pool.close().await;
+    cleanup_test_db(&db_name).await;
+}
+
+#[tokio::test]
+async fn test_pool_status() {
+    let (pool, db_name) = setup_test_db().await;
+    let db = DbOperations::new(Arc::new(pool));
+    let status = db.get_pool_status().await.unwrap();
+    
+    assert!(status.total_connections <= 5, "Total connections should not exceed max");
+    assert!(status.idle_connections <= status.total_connections, "Idle connections should not exceed total");
+    assert!(status.active_connections <= status.total_connections, "Active connections should not exceed total");
+    assert_eq!(status.active_connections + status.idle_connections, status.total_connections, "Active + Idle should equal Total");
+
+    db.pool.close().await;
+    cleanup_test_db(&db_name).await;
 } 

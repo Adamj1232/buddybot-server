@@ -111,4 +111,9 @@ impl AuthService {
 
         Ok(claims.claims)
     }
+
+    pub async fn invalidate_token(&self, token: &str) -> Result<(), Error> {
+        self.db.delete_session(token).await?;
+        Ok(())
+    }
 } 

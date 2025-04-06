@@ -262,13 +262,18 @@ mod tests {
         let instance_id = manager.register_instance("localhost".to_string(), 8080).await;
         assert_eq!(manager.get_instance_count().await, 1);
         
-        // Wait for instance to become inactive
-        sleep(Duration::from_secs(4)).await;
+        // Manually set last_heartbeat to old timestamp
+        {
+            let mut instances = manager.instances.write().await;
+            if let Some(instance) = instances.get_mut(&instance_id) {
+                instance.last_heartbeat = Utc::now() - chrono::Duration::seconds(200); // More than 3 minutes old
+            }
+        }
         
         // Cleanup inactive instances
         manager.cleanup_inactive_instances().await;
         
         // Verify instance was removed
-        assert_eq!(manager.get_instance_count().await, 0);
+        assert_eq!(manager.get_instance_count().await, 0, "Instance should be removed after cleanup");
     }
 }
