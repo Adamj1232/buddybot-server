@@ -18,6 +18,7 @@ pub use auth::{AuthService, RateLimiter, RateLimitConfig};
 pub use auth::handlers::{login, register, logout};
 pub use db::{DbOperations, User, UserSession};
 pub use scaling::{ScalingManager, ScalingConfig, InstanceInfo};
+pub use websocket::WebSocketServer;
 
 /// Health check endpoint handler
 /// Returns a JSON response with server status and timestamp
@@ -35,6 +36,7 @@ pub struct AppState {
     pub db_pool: Arc<PgPool>,
     pub scaling: Arc<ScalingManager>,
     pub auth_service: Arc<AuthService>,
+    pub ws_server: Arc<WebSocketServer>,
 }
 
 impl AppState {
@@ -56,11 +58,15 @@ impl AppState {
             config.auth.jwt_secret.clone(),
         ));
 
+        // Initialize WebSocket server
+        let ws_server = Arc::new(WebSocketServer::new(auth_service.clone()));
+
         Ok(Self {
             config: Arc::new(config),
             db_pool,
             scaling,
             auth_service,
+            ws_server,
         })
     }
 
@@ -113,12 +119,14 @@ mod tests {
             db_ops,
             "test_secret".to_string(),
         ));
+        let ws_server = Arc::new(WebSocketServer::new(auth_service.clone()));
 
         let state = AppState {
             config: Arc::new(config),
             db_pool: pool_arc,
             scaling,
             auth_service,
+            ws_server,
         };
         
         let cloned = state.clone();
@@ -128,5 +136,6 @@ mod tests {
         assert!(Arc::ptr_eq(&state.db_pool, &cloned.db_pool));
         assert!(Arc::ptr_eq(&state.scaling, &cloned.scaling));
         assert!(Arc::ptr_eq(&state.auth_service, &cloned.auth_service));
+        assert!(Arc::ptr_eq(&state.ws_server, &cloned.ws_server));
     }
 } 

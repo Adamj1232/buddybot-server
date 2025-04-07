@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE user_sessions SET last_activity = $1 WHERE token = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "38745d051f38d2991a8cd41792941d974bfc30adfe139529ee42819f1034001a"
+}
